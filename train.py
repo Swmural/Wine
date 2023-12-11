@@ -1,7 +1,6 @@
 import random
 import sys
 import numpy as np
-import os 
 
 from pyspark.sql import SparkSession
 from pyspark.sql.types import IntegerType, DoubleType
@@ -11,12 +10,16 @@ from pyspark.ml.classification import MultilayerPerceptronClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 
-spark = SparkSession.builder.appName("WineQualityPrediction").getOrCreate()
+
+spark = SparkSession.builder.appName("WineQualityPrediction").master("local").getOrCreate()
 spark.sparkContext.setLogLevel("Error")
+# spark.conf.set("spark.hadoop.fs.s3a.access.key", "ASIA2AD65DTPZUQCGXY3")
+# spark.conf.set("spark.hadoop.fs.s3a.secret.key", "97cbDLjKsZFUpj6dpBwsk54aiXqamr47OevwUZjD")
 
+# Load the training dataset
+df = spark.read.option("delimiter", ";").csv("s3://wimequalitypredictiondataset/TrainingDataset.csv", header=True, inferSchema=True)
 
-
-df = spark.read.format("csv").load("./TrainingDataset.csv", header=True, sep=";")
+# df = spark.read.format("csv").load("s3://wimequalitypredictiondataset/TrainingDataset.csv", header=True, sep=";")
 
 
 df = df.toDF("fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol", "label")
@@ -55,5 +58,9 @@ train1 = MultilayerPerceptronClassifier(maxIter=1000, layers=layers, blockSize=6
 
 Model = train1.fit(df)
 
-Model.write().overwrite().save("/best_model_lr")
-print("Model Created.")
+local_model_path = "file:///home/ec2-user/best_model_lr"
+
+# Save the model to the local file system
+Model.write().overwrite().save(local_model_path)
+
+print(f"Model Created and saved to {local_model_path}.")
