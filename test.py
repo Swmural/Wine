@@ -9,12 +9,11 @@ from pyspark.ml.classification import MultilayerPerceptronClassificationModel
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 
-spark = SparkSession.builder.appName("test").getOrCreate()
+spark = SparkSession.builder.appName("test").master("local").getOrCreate()
 spark.sparkContext.setLogLevel("Error")
 
 
-df = spark.read.format("csv").load("/ValidationDataset.csv", header=True, sep=";")
-
+df = spark.read.format("csv").load("s3://wimequalitypredictiondataset/ValidationDataset.csv", header=True, sep=";")
 
 df = df.toDF("fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol", "label")
 
@@ -41,7 +40,9 @@ df_va = va.transform(df)
 df_va = df_va.select(["features", "label"])
 df = df_va
 
-Model = MultilayerPerceptronClassificationModel.load("/best_model_lr")
+local_model_path = "/home/ec2-user/best_model_lr"
+
+Model =  MultilayerPerceptronClassificationModel.load(f"file://{local_model_path}")
 
 output = Model.transform(df)
 
